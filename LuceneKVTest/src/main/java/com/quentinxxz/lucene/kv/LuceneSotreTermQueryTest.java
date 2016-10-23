@@ -14,27 +14,26 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.FieldType.NumericType;
-import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.util.Version;
 
 /**
- * 类LuceneUnCompressedSotreTest.java的实现描述：use uncompressed store
+ * 类LuceneSotreTest.java的实现描述：LuceneSotreTest类实现描述
  * 
- * @author quentinxxz 2016年10月23日 下午3:33:02
+ * @author quentinxxz 2016年10月23日 下午3:20:23
  */
-public class LuceneUnCompressedSotreTest {
+public class LuceneSotreTermQueryTest {
 
     protected static class KeyField extends Field {
 
@@ -82,12 +81,11 @@ public class LuceneUnCompressedSotreTest {
     public static void main(String args[]) throws IOException {
         List<String> keys = new ArrayList<String>();
         AtomicInteger index = new AtomicInteger(0);
-        File indexPath = new File("/tmp/uncompressedStoreLuceune");
+        File indexPath = new File("/tmp/storeLuceune");
 
         IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_45, new WhitespaceAnalyzer(Version.LUCENE_45));
         config.setOpenMode(OpenMode.CREATE);
         config.setRAMBufferSizeMB(64);
-        config.setCodec(new UnCompressedLucene45Codec());
 
         IndexWriter writer = new IndexWriter(FSDirectory.open(indexPath), config);
 
@@ -97,13 +95,13 @@ public class LuceneUnCompressedSotreTest {
 
                 @Override
                 public String get() {
-                    return LuceneUnCompressedSotreTest.getRandomString(20);
+                    return LuceneSotreTermQueryTest.getRandomString(20);
                 }
 
-            }).limit(1000000).forEach(key -> {
+            }).limit(2000000).forEach(key -> {
                 keys.add(key);
                 try {
-                    writer.addDocument(LuceneUnCompressedSotreTest.getDocument(key, index.getAndIncrement()));
+                    writer.addDocument(LuceneSotreTermQueryTest.getDocument(key, index.getAndIncrement()));
                 } catch (Exception e) {
                 }
 
@@ -120,33 +118,28 @@ public class LuceneUnCompressedSotreTest {
 
         // 性能测试，100w次查询用时
         long start;
-        IndexReader indexReader = DirectoryReader.open(new MMapDirectory(indexPath));
-        List<TermsEnum> termsEnumList = new ArrayList<TermsEnum>();// 事先初始化termsEnumList，会有多线程问题，当多线程查询时，请用ThreadLocal封装
-        for (AtomicReaderContext context : indexReader.leaves()) {
-            termsEnumList.add(context.reader().terms("key").iterator(null));
-        }
         // mmap方式查询
-        IndexSearcher indexSearcher = new IndexSearcher(indexReader);
-        for (int i = 0; i < 10; i++) {
+        IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(new MMapDirectory(indexPath)));
+        for (int i = 0; i < 5; i++) {
             start = System.currentTimeMillis();
             keys.stream().limit(1000000).forEachOrdered(key -> {
 
-                Term term = new Term("key", key);
-                for (int l = 0; l < termsEnumList.size(); l++) {
-                    try {
-
-                        TermsEnum termsEnum = termsEnumList.get(l);
-                        // TermsEnum termsEnum = ctx.reader().terms(term.field()).iterator(null);
-                        if (termsEnum.seekExact(term.bytes()) == false) continue;
-                        DocsEnum docs = termsEnum.docs(null, null);
-                        int docId = docs.nextDoc();
-                        Document d = indexSearcher.doc(docId);
-                        int result = (Integer) d.getField("value").numericValue();
+                Query query = new TermQuery(new Term("key", key));
+                TopDocs docs;
+                try {
+                    docs = indexSearcher.search(query, 1);
+                    if (docs == null || docs.scoreDocs.length <= 0) // 未找到
+                    {
+                        System.out.println("not found");
                         return;
-                    } catch (IOException e) {
                     }
+
+                    Document d = indexSearcher.doc(docs.scoreDocs[0].doc);
+                    Integer result = (Integer) d.getField("value").numericValue();// 获得reult
+                    // System.out.println(result);
+
+                } catch (Exception e) {
                 }
-                System.out.println("not found");
 
             });
             System.out.println("useed time : " + (System.currentTimeMillis() - start) / 1000.0f + " seconds");

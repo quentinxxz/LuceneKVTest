@@ -71,7 +71,7 @@ public class LuceneDocValuesTest {
             TYPE.setIndexed(true);
             TYPE.setStored(false);
             TYPE.setDocValueType(DocValuesType.NUMERIC);
-            TYPE.setNumericType(NumericType.LONG);
+            TYPE.setNumericType(NumericType.INT);
             TYPE.setOmitNorms(true);
             TYPE.setIndexOptions(IndexOptions.DOCS_ONLY);
             TYPE.freeze();
@@ -95,7 +95,7 @@ public class LuceneDocValuesTest {
         IndexWriter writer = new IndexWriter(FSDirectory.open(indexPath), config);
 
         try {
-            // 生成并插入500w条数据
+            // 生成并插入200w条数据
             Stream.generate(new Supplier<String>() {
 
                 @Override
@@ -103,7 +103,7 @@ public class LuceneDocValuesTest {
                     return LuceneDocValuesTest.getRandomString(20);
                 }
 
-            }).limit(1000000).forEach(key -> {
+            }).limit(2000000).forEach(key -> {
                 keys.add(key);
                 try {
                     writer.addDocument(LuceneDocValuesTest.getDocument(key, index.getAndIncrement()));
@@ -135,7 +135,7 @@ public class LuceneDocValuesTest {
         }
 
         // mmap方式查询
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             start = System.currentTimeMillis();
             keys.stream().limit(1000000).forEachOrdered(key -> {
 

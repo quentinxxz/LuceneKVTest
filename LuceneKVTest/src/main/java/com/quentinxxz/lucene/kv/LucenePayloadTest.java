@@ -103,7 +103,7 @@ public class LucenePayloadTest {
         }
 
         // mmap方式查询
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             start = System.currentTimeMillis();
             keys.stream().limit(1000000).forEachOrdered(key -> {
 

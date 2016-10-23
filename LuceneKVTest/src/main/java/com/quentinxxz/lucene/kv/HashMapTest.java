@@ -35,6 +35,7 @@ public class HashMapTest {
             hashMap.put(key, index.get());
 
             if (index.get() % 100000 == 0) System.out.println(index + " records has benn inserted");
+            index.incrementAndGet();
 
         });
 
