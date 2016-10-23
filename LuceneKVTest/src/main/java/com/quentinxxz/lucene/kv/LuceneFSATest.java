@@ -40,7 +40,7 @@ public class LuceneFSATest {
         final IntsRef scratchIntsRef = new IntsRef();
         BytesRef output = new BytesRef(4);
 
-        // 生成并插入500w条数据
+        // 生成并插入200w条数据
         Stream.generate(new Supplier<String>() {
 
             @Override
@@ -74,7 +74,7 @@ public class LuceneFSATest {
         IndexInput in = directory.openInput("fst.bin", null);
         FST<BytesRef> fst = new FST<BytesRef>(in, ByteSequenceOutputs.getSingleton());
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             start = System.currentTimeMillis();
             keys.stream().limit(1000000).forEachOrdered(key -> {
 
